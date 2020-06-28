@@ -340,7 +340,7 @@ func getProfile(configString, profileKey string) (*Profile, error) {
 		return nil, err
 	}
 
-	profile, err := c.LoadProfile(profileKey)
+	profile, err := c.GetProfile(profileKey)
 	if err != nil {
 		return nil, err
 	}

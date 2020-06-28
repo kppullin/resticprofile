@@ -124,9 +124,9 @@ func main() {
 		// Single profile run
 		runProfile(c, global, flags, flags.name, resticBinary, resticArguments, resticCommand)
 
-	} else if c.HasGroup(flags.name) {
+	} else if c.HasProfileGroup(flags.name) {
 		// Group run
-		group, err := c.LoadGroup(flags.name)
+		group, err := c.GetProfileGroup(flags.name)
 		if err != nil {
 			clog.Errorf("cannot load group '%s': %v", flags.name, err)
 		}
@@ -202,7 +202,7 @@ func setPriority(nice int, class string) error {
 func runProfile(c *config.Config, global *config.Global, flags commandLineFlags, profileName string, resticBinary string, resticArguments []string, resticCommand string) {
 	var err error
 
-	profile, err := c.LoadProfile(profileName)
+	profile, err := c.GetProfile(profileName)
 	if err != nil {
 		clog.Warning(err)
 	}

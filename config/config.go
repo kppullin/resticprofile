@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/creativeprojects/resticprofile/array"
 	"github.com/creativeprojects/resticprofile/clog"
 	"github.com/creativeprojects/resticprofile/constants"
 	"github.com/mitchellh/mapstructure"
@@ -102,12 +101,6 @@ func (c *Config) load(input io.Reader) error {
 	return nil
 }
 
-// AllKeys returns all keys holding a value, regardless of where they are set.
-// Nested keys are separated by a "."
-func (c *Config) AllKeys() []string {
-	return c.viper.AllKeys()
-}
-
 // IsSet checks if the key contains a value
 func (c *Config) IsSet(key string) bool {
 	if strings.Contains(key, ".") {
@@ -131,49 +124,58 @@ func (c *Config) HasProfile(profileKey string) bool {
 	return c.IsSet(profileKey)
 }
 
-// ProfileGroups returns all groups from the configuration
-func (c *Config) ProfileGroups() map[string][]string {
-	groups := make(map[string][]string, 0)
-	if !c.IsSet(constants.SectionConfigurationGroups) {
-		return nil
-	}
-	err := c.unmarshalKey(constants.SectionConfigurationGroups, &groups)
-	if err != nil {
-		return nil
-	}
-	return groups
+// AllSettings merges all settings and returns them as a map[string]interface{}.
+func (c *Config) AllSettings() map[string]interface{} {
+	return c.viper.AllSettings()
 }
 
-// ProfileSections returns a list of profiles with all the sections defined inside each
-func (c *Config) ProfileSections() map[string][]string {
-	allKeys := c.AllKeys()
-	if allKeys == nil || len(allKeys) == 0 {
-		return nil
+// GetProfileSections returns a list of profiles with all the sections defined inside each
+func (c *Config) GetProfileSections() map[string][]string {
+	profiles := map[string][]string{}
+	allSettings := c.AllSettings()
+	for sectionKey, sectionRawValue := range allSettings {
+		if sectionKey == constants.SectionConfigurationGlobal || sectionKey == constants.SectionConfigurationGroups {
+			continue
+		}
+		var commandList []string
+		if c.format == "hcl" {
+			commandList = c.getCommandListHCL(sectionRawValue)
+		} else {
+			commandList = c.getCommandList(sectionRawValue)
+		}
+		profiles[sectionKey] = commandList
 	}
-	profileSections := make(map[string][]string, 0)
-	for _, keys := range allKeys {
-		keyPath := strings.SplitN(keys, ".", 3)
-		if len(keyPath) > 0 {
-			if keyPath[0] == constants.SectionConfigurationGlobal || keyPath[0] == constants.SectionConfigurationGroups {
-				continue
+	return profiles
+}
+
+func (c *Config) getCommandList(sectionRawValue interface{}) []string {
+	commandList := []string{}
+	if sectionValues, ok := sectionRawValue.(map[string]interface{}); ok {
+		// For each value in here, if it's a map it means it's defining some command parameters
+		for key, value := range sectionValues {
+			if _, ok := value.(map[string]interface{}); ok {
+				commandList = append(commandList, key)
 			}
-			var commands []string
-			var found bool
-			if commands, found = profileSections[keyPath[0]]; !found {
-				commands = make([]string, 0)
-			} else {
-				commands = profileSections[keyPath[0]]
-			}
-			// If there are more than two keys, it means the second key is a group of keys, so it's a "command" definition
-			if len(keyPath) > 2 {
-				if _, found = array.FindString(commands, keyPath[1]); !found {
-					commands = append(commands, keyPath[1])
-				}
-			}
-			profileSections[keyPath[0]] = commands
 		}
 	}
-	return profileSections
+	return commandList
+}
+
+func (c *Config) getCommandListHCL(sectionRawValue interface{}) []string {
+	commandList := []string{}
+	if sectionValues, ok := sectionRawValue.([]map[string]interface{}); ok {
+		// for each map in the array
+		for _, subMap := range sectionValues {
+			// for each value in here, if it's a map it means it's defining some command parameters
+			for key, value := range subMap {
+				// Special case for hcl where each map will be wrapped around a list
+				if _, ok := value.([]map[string]interface{}); ok {
+					commandList = append(commandList, key)
+				}
+			}
+		}
+	}
+	return commandList
 }
 
 // GetGlobalSection returns the global configuration
@@ -186,8 +188,8 @@ func (c *Config) GetGlobalSection() (*Global, error) {
 	return global, nil
 }
 
-// HasGroup returns true if the group of profiles exists in the configuration
-func (c *Config) HasGroup(groupKey string) bool {
+// HasProfileGroup returns true if the group of profiles exists in the configuration
+func (c *Config) HasProfileGroup(groupKey string) bool {
 	if !c.IsSet(constants.SectionConfigurationGroups) {
 		return false
 	}
@@ -199,8 +201,8 @@ func (c *Config) HasGroup(groupKey string) bool {
 	return ok
 }
 
-// LoadGroup returns the list of profiles in a group
-func (c *Config) LoadGroup(groupKey string) ([]string, error) {
+// GetProfileGroup returns the list of profiles in a group
+func (c *Config) GetProfileGroup(groupKey string) ([]string, error) {
 	err := c.loadGroups()
 	if err != nil {
 		return nil, err
@@ -213,7 +215,22 @@ func (c *Config) LoadGroup(groupKey string) ([]string, error) {
 	return group, nil
 }
 
+// GetProfileGroups returns all groups from the configuration
+//
+// If the groups section does not exist, it returns an empty map
+func (c *Config) GetProfileGroups() map[string][]string {
+	err := c.loadGroups()
+	if err != nil {
+		return nil
+	}
+	return c.groups
+}
+
 func (c *Config) loadGroups() error {
+	if !c.IsSet(constants.SectionConfigurationGroups) {
+		c.groups = map[string][]string{}
+		return nil
+	}
 	if c.groups == nil {
 		groups := map[string][]string{}
 		err := c.unmarshalKey(constants.SectionConfigurationGroups, &groups)
@@ -225,8 +242,8 @@ func (c *Config) loadGroups() error {
 	return nil
 }
 
-// LoadProfile from configuration
-func (c *Config) LoadProfile(profileKey string) (*Profile, error) {
+// GetProfile from configuration
+func (c *Config) GetProfile(profileKey string) (*Profile, error) {
 	var err error
 	var profile *Profile
 
@@ -242,7 +259,7 @@ func (c *Config) LoadProfile(profileKey string) (*Profile, error) {
 	if profile.Inherit != "" {
 		inherit := profile.Inherit
 		// Load inherited profile
-		profile, err = c.LoadProfile(inherit)
+		profile, err = c.GetProfile(inherit)
 		if err != nil {
 			return nil, err
 		}
