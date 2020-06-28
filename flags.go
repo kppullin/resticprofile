@@ -9,16 +9,15 @@ import (
 )
 
 type commandLineFlags struct {
-	help         bool
-	quiet        bool
-	verbose      bool
-	config       string
-	name         string
-	noAnsi       bool
-	theme        string
-	resticArgs   []string
-	selfUpdate   bool
-	saveConfigAs string
+	help       bool
+	quiet      bool
+	verbose    bool
+	config     string
+	name       string
+	noAnsi     bool
+	theme      string
+	resticArgs []string
+	selfUpdate bool
 }
 
 // loadFlags loads command line flags (before any command)

@@ -16,7 +16,6 @@ import (
 	"github.com/creativeprojects/resticprofile/constants"
 	"github.com/creativeprojects/resticprofile/filesearch"
 	"github.com/creativeprojects/resticprofile/priority"
-	"github.com/spf13/viper"
 )
 
 // These fields are populated by the goreleaser build
@@ -74,13 +73,13 @@ func main() {
 
 	c, err := config.LoadFile(configFile)
 	if err != nil {
-		clog.Error("Cannot load configuration file:", err)
+		clog.Error("cannot load configuration file:", err)
 		os.Exit(1)
 	}
 
 	global, err := c.GetGlobalSection()
 	if err != nil {
-		clog.Error("Cannot load global configuration:", err)
+		clog.Error("cannot load global configuration:", err)
 		os.Exit(1)
 	}
 
@@ -98,8 +97,8 @@ func main() {
 
 	resticBinary, err := filesearch.FindResticBinary(global.ResticBinary)
 	if err != nil {
-		clog.Error("Cannot find restic:", err)
-		clog.Warning("You can specify the path of the restic binary in the global section of the configuration file (restic-binary)")
+		clog.Error("cannot find restic:", err)
+		clog.Warning("you can specify the path of the restic binary in the global section of the configuration file (restic-binary)")
 		os.Exit(1)
 	}
 
@@ -129,7 +128,7 @@ func main() {
 		// Group run
 		group, err := c.LoadGroup(flags.name)
 		if err != nil {
-			clog.Errorf("Cannot load group '%s': %v", flags.name, err)
+			clog.Errorf("cannot load group '%s': %v", flags.name, err)
 		}
 		if group != nil && len(group) > 0 {
 			for i, profileName := range group {
@@ -139,7 +138,7 @@ func main() {
 		}
 
 	} else {
-		clog.Errorf("Profile or group not found '%s'", flags.name)
+		clog.Errorf("profile or group not found '%s'", flags.name)
 		displayProfiles(c)
 		displayGroups(c)
 		os.Exit(1)
@@ -163,7 +162,7 @@ func setLoggerFlags(flags commandLineFlags) {
 			coin = "quiet"
 			flags.verbose = false
 		}
-		clog.Warningf("You specified -quiet (-q) and -verbose (-v) at the same time. So let's flip a coin! and selection is ... %s.", coin)
+		clog.Warningf("you specified -quiet (-q) and -verbose (-v) at the same time. So let's flip a coin! and selection is ... %s.", coin)
 	}
 	if flags.quiet {
 		clog.Quiet()
@@ -208,7 +207,7 @@ func runProfile(c *config.Config, global *config.Global, flags commandLineFlags,
 		clog.Warning(err)
 	}
 	if profile == nil {
-		clog.Errorf("Profile '%s' not found", profileName)
+		clog.Errorf("cannot load profile '%s'", profileName)
 		os.Exit(1)
 	}
 
@@ -224,9 +223,9 @@ func runProfile(c *config.Config, global *config.Global, flags commandLineFlags,
 
 	// All files in the configuration are relative to the configuration file, NOT the folder where resticprofile is started
 	// So we need to fix all relative files
-	rootPath := filepath.Dir(viper.ConfigFileUsed())
+	rootPath := filepath.Dir(c.GetConfigFile())
 	if rootPath != "." {
-		clog.Debugf("Files in configuration are relative to '%s'", rootPath)
+		clog.Debugf("files in configuration are relative to '%s'", rootPath)
 	}
 	profile.SetRootPath(rootPath)
 

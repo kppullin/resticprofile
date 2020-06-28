@@ -17,9 +17,11 @@ import (
 
 // Config wraps up a viper configuration object
 type Config struct {
-	keyDelim string
-	format   string
-	viper    *viper.Viper
+	keyDelim   string
+	format     string
+	configFile string
+	viper      *viper.Viper
+	groups     map[string][]string
 }
 
 // This is where things are getting hairy:
@@ -35,10 +37,14 @@ type Config struct {
 //   key2 = "value"
 // }
 //
-// For that matter, viper creates an slice of maps instead of a map on the other configuration file formats
-// The code in this file deals with the slice to merge it into a single map
+// For that matter, viper creates an slice of maps instead of a map for the other configuration file formats
+// This configOptionHCL deals with the slice to merge it into a single map
 var (
 	configOption = viper.DecodeHook(mapstructure.ComposeDecodeHookFunc(
+		mapstructure.StringToTimeDurationHookFunc(),
+		mapstructure.StringToSliceHookFunc(","),
+	))
+	configOptionHCL = viper.DecodeHook(mapstructure.ComposeDecodeHookFunc(
 		sliceOfMapsToMapHookFunc(),
 		mapstructure.StringToTimeDurationHookFunc(),
 		mapstructure.StringToSliceHookFunc(","),
@@ -64,22 +70,36 @@ func LoadFile(configFile string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot open configuration file for reading: %w", err)
 	}
-	return Load(file, format)
+	c := newConfig(format)
+	c.configFile = configFile
+	err = c.load(file)
+	if err != nil {
+		return c, err
+	}
+	return c, nil
 }
 
 // Load configuration from reader
 func Load(input io.Reader, format string) (*Config, error) {
-	// For compatibility with the previous versions, a .conf file is TOML format
-	if format == "conf" {
-		format = "toml"
-	}
 	c := newConfig(format)
+	err := c.load(input)
+	if err != nil {
+		return c, err
+	}
+	return c, nil
+}
+
+func (c *Config) load(input io.Reader) error {
+	// For compatibility with the previous versions, a .conf file is TOML format
+	if c.format == "conf" {
+		c.format = "toml"
+	}
 	c.viper.SetConfigType(c.format)
 	err := c.viper.ReadConfig(input)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse %s configuration: %w", format, err)
+		return fmt.Errorf("cannot parse %s configuration: %w", c.format, err)
 	}
-	return c, nil
+	return nil
 }
 
 // AllKeys returns all keys holding a value, regardless of where they are set.
@@ -94,6 +114,11 @@ func (c *Config) IsSet(key string) bool {
 		clog.Warningf("it should not search for a subkey: %s", key)
 	}
 	return c.viper.IsSet(key)
+}
+
+// GetConfigFile returns the config file used
+func (c *Config) GetConfigFile() string {
+	return c.configFile
 }
 
 // Get the value from the key
@@ -166,17 +191,38 @@ func (c *Config) HasGroup(groupKey string) bool {
 	if !c.IsSet(constants.SectionConfigurationGroups) {
 		return false
 	}
-	return c.IsSet(constants.SectionConfigurationGroups + "." + groupKey)
+	err := c.loadGroups()
+	if err != nil {
+		return false
+	}
+	_, ok := c.groups[groupKey]
+	return ok
 }
 
 // LoadGroup returns the list of profiles in a group
 func (c *Config) LoadGroup(groupKey string) ([]string, error) {
-	group := make([]string, 0)
-	err := c.unmarshalKey(constants.SectionConfigurationGroups+"."+groupKey, &group)
+	err := c.loadGroups()
 	if err != nil {
 		return nil, err
 	}
+
+	group, ok := c.groups[groupKey]
+	if !ok {
+		return nil, fmt.Errorf("group '%s' not found", groupKey)
+	}
 	return group, nil
+}
+
+func (c *Config) loadGroups() error {
+	if c.groups == nil {
+		groups := map[string][]string{}
+		err := c.unmarshalKey(constants.SectionConfigurationGroups, &groups)
+		if err != nil {
+			return err
+		}
+		c.groups = groups
+	}
+	return nil
 }
 
 // LoadProfile from configuration
@@ -214,8 +260,11 @@ func (c *Config) LoadProfile(profileKey string) (*Profile, error) {
 	return profile, nil
 }
 
-// unmarshalKey is a wrapper around viper.UnmarshalKey with default decoder config options
+// unmarshalKey is a wrapper around viper.UnmarshalKey with the right decoder config options
 func (c *Config) unmarshalKey(key string, rawVal interface{}) error {
+	if c.format == "hcl" {
+		return c.viper.UnmarshalKey(key, rawVal, configOptionHCL)
+	}
 	return c.viper.UnmarshalKey(key, rawVal, configOption)
 }
 

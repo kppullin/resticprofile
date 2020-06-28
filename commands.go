@@ -16,6 +16,7 @@ type ownCommand struct {
 	description       string
 	action            func(*config.Config, commandLineFlags, []string) error
 	needConfiguration bool // true if the action needs a configuration file loaded
+	hide              bool
 }
 
 var (
@@ -43,6 +44,14 @@ var (
 			description:       "(debug only) show all keys from the configuration file",
 			action:            allKeys,
 			needConfiguration: true,
+			hide:              true,
+		},
+		{
+			name:              "panic",
+			description:       "(debug only) simulates a panic",
+			action:            panicCommand,
+			needConfiguration: false,
+			hide:              true,
 		},
 	}
 )
@@ -50,6 +59,9 @@ var (
 func displayOwnCommands() {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	for _, command := range ownCommands {
+		if command.hide {
+			continue
+		}
 		_, _ = fmt.Fprintf(w, "\t%s\t%s\n", command.name, command.description)
 	}
 	_ = w.Flush()
@@ -139,4 +151,8 @@ func allKeys(configuration *config.Config, flags commandLineFlags, args []string
 	}
 	_ = w.Flush()
 	return nil
+}
+
+func panicCommand(_ *config.Config, _ commandLineFlags, _ []string) error {
+	panic("you asked for it")
 }
