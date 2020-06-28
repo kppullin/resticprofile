@@ -13,10 +13,9 @@ import (
 func TestEmptyAllKeysForTOML(t *testing.T) {
 	testConfig := ""
 
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "toml")
+	c, err := Load(bytes.NewBufferString(testConfig), "toml")
 	require.NoError(t, err)
-	keys := configuration.AllKeys()
+	keys := c.AllKeys()
 	assert.Empty(t, keys)
 }
 
@@ -43,10 +42,9 @@ profile4.backup.source
 profile4.value
 profile5.other`
 
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "toml")
+	c, err := Load(bytes.NewBufferString(testConfig), "toml")
 	require.NoError(t, err)
-	keys := configuration.AllKeys()
+	keys := c.AllKeys()
 	sort.Slice(keys, func(i, j int) bool {
 		return keys[i] < keys[j]
 	})
@@ -56,21 +54,19 @@ profile5.other`
 func TestNoProfileGroups(t *testing.T) {
 	testConfig := ""
 
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "toml")
+	c, err := Load(bytes.NewBufferString(testConfig), "toml")
 	require.NoError(t, err)
 
-	assert.Nil(t, configuration.ProfileGroups())
+	assert.Nil(t, c.ProfileGroups())
 }
 
 func TestEmptyProfileGroups(t *testing.T) {
 	testConfig := `[groups]
 `
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "toml")
+	c, err := Load(bytes.NewBufferString(testConfig), "toml")
 	require.NoError(t, err)
 
-	assert.NotNil(t, configuration.ProfileGroups())
+	assert.NotNil(t, c.ProfileGroups())
 }
 
 func TestProfileGroups(t *testing.T) {
@@ -78,11 +74,10 @@ func TestProfileGroups(t *testing.T) {
 first = ["backup"]
 second = ["root", "dev"]
 `
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "toml")
+	c, err := Load(bytes.NewBufferString(testConfig), "toml")
 	require.NoError(t, err)
 
-	groups := configuration.ProfileGroups()
+	groups := c.ProfileGroups()
 	assert.NotNil(t, groups)
 	assert.Len(t, groups, 2)
 }
@@ -90,11 +85,10 @@ second = ["root", "dev"]
 func TestNoProfileSectionsForTOML(t *testing.T) {
 	testConfig := ""
 
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "toml")
+	c, err := Load(bytes.NewBufferString(testConfig), "toml")
 	require.NoError(t, err)
 
-	assert.Nil(t, configuration.ProfileSections())
+	assert.Nil(t, c.ProfileSections())
 }
 
 func TestProfileSectionsForTOML(t *testing.T) {
@@ -114,11 +108,10 @@ other = 2
 [global]
 Initialize = true
 `
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "toml")
+	c, err := Load(bytes.NewBufferString(testConfig), "toml")
 	require.NoError(t, err)
 
-	profileSections := configuration.ProfileSections()
+	profileSections := c.ProfileSections()
 	assert.NotNil(t, profileSections)
 	assert.Len(t, profileSections, 2)
 }
@@ -132,11 +125,10 @@ func TestGetGlobalFromJSON(t *testing.T) {
     "priority": "low"
   }
 }`
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "json")
+	c, err := Load(bytes.NewBufferString(testConfig), "json")
 	require.NoError(t, err)
 
-	global, err := GetGlobalSection(configuration)
+	global, err := c.GetGlobalSection()
 	require.NoError(t, err)
 	assert.Equal(t, "version", global.DefaultCommand)
 	assert.Equal(t, false, global.Initialize)
@@ -151,11 +143,10 @@ global:
     initialize: false
     priority: low
 `
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "yaml")
+	c, err := Load(bytes.NewBufferString(testConfig), "yaml")
 	require.NoError(t, err)
 
-	global, err := GetGlobalSection(configuration)
+	global, err := c.GetGlobalSection()
 	require.NoError(t, err)
 	assert.Equal(t, "version", global.DefaultCommand)
 	assert.Equal(t, false, global.Initialize)
@@ -171,11 +162,10 @@ default-command = "version"
 # initialize a repository if none exist at location
 initialize = false
 `
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "toml")
+	c, err := Load(bytes.NewBufferString(testConfig), "toml")
 	require.NoError(t, err)
 
-	global, err := GetGlobalSection(configuration)
+	global, err := c.GetGlobalSection()
 	require.NoError(t, err)
 	assert.Equal(t, "version", global.DefaultCommand)
 	assert.Equal(t, false, global.Initialize)
@@ -191,11 +181,10 @@ func TestGetGlobalFromHCL(t *testing.T) {
     priority = "low"
 }
 `
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "hcl")
+	c, err := Load(bytes.NewBufferString(testConfig), "hcl")
 	require.NoError(t, err)
 
-	global, err := GetGlobalSection(configuration)
+	global, err := c.GetGlobalSection()
 	require.NoError(t, err)
 	assert.Equal(t, "version", global.DefaultCommand)
 	assert.Equal(t, false, global.Initialize)
@@ -215,11 +204,10 @@ func TestGetGlobalFromSplitConfig(t *testing.T) {
     priority = "low"
 }
 `
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(testConfig), "hcl")
+	c, err := Load(bytes.NewBufferString(testConfig), "hcl")
 	require.NoError(t, err)
 
-	global, err := GetGlobalSection(configuration)
+	global, err := c.GetGlobalSection()
 	require.NoError(t, err)
 	assert.Equal(t, "version", global.DefaultCommand)
 	assert.Equal(t, false, global.Initialize)

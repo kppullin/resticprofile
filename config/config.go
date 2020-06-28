@@ -20,7 +20,6 @@ type Config struct {
 	keyDelim string
 	format   string
 	viper    *viper.Viper
-	data     map[string]interface{}
 }
 
 // This is where things are getting hairy:
@@ -46,37 +45,41 @@ var (
 	))
 )
 
-// NewConfig instantiate a new Config object
-func NewConfig() *Config {
+// newConfig instantiate a new Config object
+func newConfig(format string) *Config {
 	return &Config{
 		keyDelim: ".",
+		format:   format,
 		viper:    viper.New(),
-		data:     make(map[string]interface{}),
 	}
 }
 
 // LoadFile loads configuration from file
-func (c *Config) LoadFile(configFile string) error {
+func LoadFile(configFile string) (*Config, error) {
 	format := filepath.Ext(configFile)
 	if strings.HasPrefix(format, ".") {
 		format = format[1:]
 	}
 	file, err := os.Open(configFile)
 	if err != nil {
-		return fmt.Errorf("cannot open configuration file for reading: %w", err)
+		return nil, fmt.Errorf("cannot open configuration file for reading: %w", err)
 	}
-	return c.Load(file, format)
+	return Load(file, format)
 }
 
 // Load configuration from reader
-func (c *Config) Load(input io.Reader, format string) error {
+func Load(input io.Reader, format string) (*Config, error) {
 	// For compatibility with the previous versions, a .conf file is TOML format
 	if format == "conf" {
 		format = "toml"
 	}
-	c.format = format
+	c := newConfig(format)
 	c.viper.SetConfigType(c.format)
-	return c.viper.ReadConfig(input)
+	err := c.viper.ReadConfig(input)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse %s configuration: %w", format, err)
+	}
+	return c, nil
 }
 
 // AllKeys returns all keys holding a value, regardless of where they are set.
@@ -148,9 +151,67 @@ func (c *Config) ProfileSections() map[string][]string {
 	return profileSections
 }
 
-// SaveAs saves the current configuration into the file in parameter
-func (c *Config) SaveAs(filename string) error {
-	return c.viper.SafeWriteConfigAs(filename)
+// GetGlobalSection returns the global configuration
+func (c *Config) GetGlobalSection() (*Global, error) {
+	global := newGlobal()
+	err := c.unmarshalKey(constants.SectionConfigurationGlobal, global)
+	if err != nil {
+		return nil, err
+	}
+	return global, nil
+}
+
+// HasGroup returns true if the group of profiles exists in the configuration
+func (c *Config) HasGroup(groupKey string) bool {
+	if !c.IsSet(constants.SectionConfigurationGroups) {
+		return false
+	}
+	return c.IsSet(constants.SectionConfigurationGroups + "." + groupKey)
+}
+
+// LoadGroup returns the list of profiles in a group
+func (c *Config) LoadGroup(groupKey string) ([]string, error) {
+	group := make([]string, 0)
+	err := c.unmarshalKey(constants.SectionConfigurationGroups+"."+groupKey, &group)
+	if err != nil {
+		return nil, err
+	}
+	return group, nil
+}
+
+// LoadProfile from configuration
+func (c *Config) LoadProfile(profileKey string) (*Profile, error) {
+	var err error
+	var profile *Profile
+
+	if !c.IsSet(profileKey) {
+		return nil, nil
+	}
+
+	profile = NewProfile(c, profileKey)
+	err = c.unmarshalKey(profileKey, profile)
+	if err != nil {
+		return nil, err
+	}
+	if profile.Inherit != "" {
+		inherit := profile.Inherit
+		// Load inherited profile
+		profile, err = c.LoadProfile(inherit)
+		if err != nil {
+			return nil, err
+		}
+		if profile == nil {
+			return nil, fmt.Errorf("error in profile '%s': parent profile '%s' not found", profileKey, inherit)
+		}
+		// and reload this profile onto the inherited one
+		err = c.unmarshalKey(profileKey, profile)
+		if err != nil {
+			return nil, err
+		}
+		// make sure it has the right name
+		profile.Name = profileKey
+	}
+	return profile, nil
 }
 
 // unmarshalKey is a wrapper around viper.UnmarshalKey with default decoder config options

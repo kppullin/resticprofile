@@ -58,13 +58,12 @@ restic-binary = "/tmp/restic"
 }
 
 func getGlobalSection(configString string) (*Global, error) {
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(configString), "toml")
+	c, err := Load(bytes.NewBufferString(configString), "toml")
 	if err != nil {
 		return nil, err
 	}
 
-	global, err := GetGlobalSection(configuration)
+	global, err := c.GetGlobalSection()
 	if err != nil {
 		return nil, err
 	}

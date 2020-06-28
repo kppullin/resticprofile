@@ -72,23 +72,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	configuration := config.NewConfig()
-	err = configuration.LoadFile(configFile)
+	c, err := config.LoadFile(configFile)
 	if err != nil {
 		clog.Error("Cannot load configuration file:", err)
 		os.Exit(1)
 	}
 
-	if flags.saveConfigAs != "" {
-		err = configuration.SaveAs(flags.saveConfigAs)
-		if err != nil {
-			clog.Error("Cannot save configuration file:", err)
-			os.Exit(1)
-		}
-		return
-	}
-
-	global, err := config.GetGlobalSection(configuration)
+	global, err := c.GetGlobalSection()
 	if err != nil {
 		clog.Error("Cannot load global configuration:", err)
 		os.Exit(1)
@@ -123,7 +113,7 @@ func main() {
 
 	// resticprofile own commands (with configuration file)
 	if isOwnCommand(resticCommand, true) {
-		err = runOwnCommand(configuration, resticCommand, flags, resticArguments)
+		err = runOwnCommand(c, resticCommand, flags, resticArguments)
 		if err != nil {
 			clog.Error(err)
 			os.Exit(1)
@@ -131,27 +121,27 @@ func main() {
 		return
 	}
 
-	if configuration.HasProfile(flags.name) {
+	if c.HasProfile(flags.name) {
 		// Single profile run
-		runProfile(configuration, global, flags, flags.name, resticBinary, resticArguments, resticCommand)
+		runProfile(c, global, flags, flags.name, resticBinary, resticArguments, resticCommand)
 
-	} else if config.HasGroup(configuration, flags.name) {
+	} else if c.HasGroup(flags.name) {
 		// Group run
-		group, err := config.LoadGroup(configuration, flags.name)
+		group, err := c.LoadGroup(flags.name)
 		if err != nil {
 			clog.Errorf("Cannot load group '%s': %v", flags.name, err)
 		}
 		if group != nil && len(group) > 0 {
 			for i, profileName := range group {
 				clog.Debugf("[%d/%d] Starting profile '%s' from group '%s'", i+1, len(group), profileName, flags.name)
-				runProfile(configuration, global, flags, profileName, resticBinary, resticArguments, resticCommand)
+				runProfile(c, global, flags, profileName, resticBinary, resticArguments, resticCommand)
 			}
 		}
 
 	} else {
 		clog.Errorf("Profile or group not found '%s'", flags.name)
-		displayProfiles(configuration)
-		displayGroups(configuration)
+		displayProfiles(c)
+		displayGroups(c)
 		os.Exit(1)
 	}
 }
@@ -210,10 +200,10 @@ func setPriority(nice int, class string) error {
 	return nil
 }
 
-func runProfile(configuration *config.Config, global *config.Global, flags commandLineFlags, profileName string, resticBinary string, resticArguments []string, resticCommand string) {
+func runProfile(c *config.Config, global *config.Global, flags commandLineFlags, profileName string, resticBinary string, resticArguments []string, resticCommand string) {
 	var err error
 
-	profile, err := config.LoadProfile(configuration, profileName)
+	profile, err := c.LoadProfile(profileName)
 	if err != nil {
 		clog.Warning(err)
 	}

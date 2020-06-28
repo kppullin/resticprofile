@@ -336,13 +336,12 @@ path = "/"
 }
 
 func getProfile(configString, profileKey string) (*Profile, error) {
-	configuration := NewConfig()
-	err := configuration.Load(bytes.NewBufferString(configString), "toml")
+	c, err := Load(bytes.NewBufferString(configString), "toml")
 	if err != nil {
 		return nil, err
 	}
 
-	profile, err := LoadProfile(configuration, profileKey)
+	profile, err := c.LoadProfile(profileKey)
 	if err != nil {
 		return nil, err
 	}
