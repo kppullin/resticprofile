@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/adrg/xdg v0.2.1
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/creativeprojects/go-github-selfupdate v1.2.3
 	github.com/fatih/color v1.9.0
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
@@ -17,7 +18,6 @@ require (
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/onsi/gomega v1.9.0 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
-	github.com/rhysd/go-github-selfupdate v1.2.2
 	github.com/smartystreets/assertions v1.0.0 // indirect
 	github.com/spf13/afero v1.3.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect

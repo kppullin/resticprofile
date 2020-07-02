@@ -10,20 +10,22 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
+	"github.com/creativeprojects/go-github-selfupdate/selfupdate"
 	"github.com/creativeprojects/resticprofile/clog"
-	"github.com/rhysd/go-github-selfupdate/selfupdate"
 )
 
 func confirmAndSelfUpdate(debug bool) error {
+	arch := getArch()
 	if debug {
 		selfupdate.EnableLog()
 	}
+	selfupdate.SetArch(arch)
 	latest, found, err := selfupdate.DetectLatest("creativeprojects/resticprofile")
 	if err != nil {
 		return fmt.Errorf("error occurred while detecting version: %v", err)
 	}
 	if !found {
-		return fmt.Errorf("latest version for %s/%s could not be found from github repository", runtime.GOOS, runtime.GOARCH)
+		return fmt.Errorf("latest version for %s/%s could not be found from github repository", runtime.GOOS, arch)
 	}
 
 	v := semver.MustParse(version)
@@ -78,4 +80,14 @@ func askYesNo(reader io.Reader, message string, defaultAnswer bool) bool {
 		return true
 	}
 	return false
+}
+
+func getArch() string {
+	arch := runtime.GOARCH
+
+	// specific case for arm, we select armv6 instead
+	if arch == "arm" {
+		arch = "armv6"
+	}
+	return arch
 }
