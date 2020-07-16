@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/creativeprojects/resticprofile/clog"
+	"github.com/creativeprojects/clog"
 	"github.com/creativeprojects/resticprofile/remote"
 )
 
