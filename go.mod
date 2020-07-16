@@ -6,7 +6,7 @@ require (
 	github.com/adrg/xdg v0.2.1
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/capnspacehook/taskmaster v0.0.0-20190802050140-eebf732b5748
-	github.com/fatih/color v1.9.0
+	github.com/creativeprojects/clog v0.0.0-20200715220202-9343aa5852af
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/go-cmp v0.4.1 // indirect
@@ -21,7 +21,6 @@ require (
 	github.com/rhysd/go-github-selfupdate v1.2.2
 	github.com/rickb777/date v1.12.3
 	github.com/smartystreets/assertions v1.0.0 // indirect
-	github.com/spf13/afero v1.3.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
