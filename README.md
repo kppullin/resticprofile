@@ -48,6 +48,7 @@ For the rest of the documentation, I'll be mostly showing examples using the TOM
     * [Other unixes (Linux and BSD)](#other-unixes-linux-and-bsd)
     * [Windows](#windows)
   * [Path resolution in configuration](#path-resolution-in-configuration)
+  * [Run commands before, after success or after failure](#run-commands-before-after-success-or-after-failure)
   * [Using resticprofile](#using-resticprofile)
   * [Command line reference](#command-line-reference)
   * [Minimum memory required](#minimum-memory-required)
@@ -71,7 +72,6 @@ For the rest of the documentation, I'll be mostly showing examples using the TOM
     * [User agent](#user-agent)
       * [Special case of schedule\-permission=user with sudo](#special-case-of-schedule-permissionuser-with-sudo)
     * [Daemon](#daemon)
-
 
 
 ## Requirements
@@ -457,6 +457,35 @@ resticprofile will search for your configuration file in these folders:
 ## Path resolution in configuration
 
 All files path in the configuration are resolved from the configuration path. The big **exception** being `source` in `backup` section where it's resolved from the current path where you started resticprofile.
+
+## Run commands before, after success or after failure
+
+resticprofile has 2 places you can run commands around restic:
+
+- commands that will run before and after every restic command (snapshots, backup, check, forget, prune, mount, etc.). These are placed at the root of each profile.
+- commands that will only run before and after a backup: these are placed in the backup section of your profiles.
+
+Here's an example of all the commands that you can run in a profile:
+
+```yaml
+documents:
+    inherit: default
+    run-before: "echo == run-before profile $PROFILE_NAME command $PROFILE_COMMAND"
+    run-after: "echo == run-after profile $PROFILE_NAME command $PROFILE_COMMAND"
+    run-after-fail: "echo == Error in profile $PROFILE_NAME command $PROFILE_COMMAND: $ERROR"
+    backup:
+        run-before: "echo === run-before backup profile $PROFILE_NAME command $PROFILE_COMMAND"
+        run-after: "echo === run-after backup profile $PROFILE_NAME command $PROFILE_COMMAND"
+        source: ~/Documents
+```
+
+`run-before`, `run-after` and `run-after-fail` can be a string, or an array of strings if you need to run more than one command
+
+A few environment variables will be set before running these commands:
+- `PROFILE_NAME`
+- `PROFILE_COMMAND`: backup, check, forget, etc.
+
+Additionally for the `run-after-fail` commands, the `ERROR` environment variable will be set to the latest error message.
 
 ## Using resticprofile
 
