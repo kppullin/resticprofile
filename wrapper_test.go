@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -143,4 +144,49 @@ func TestDryRun(t *testing.T) {
 	err := wrapper.runProfile()
 	assert.NoError(t, err)
 	assert.Equal(t, "", buffer.String())
+}
+
+func TestEnvProfileName(t *testing.T) {
+	buffer := &bytes.Buffer{}
+	term.SetOutput(buffer)
+	profile := config.NewProfile(nil, "TestEnvProfileName")
+	if runtime.GOOS == "windows" {
+		profile.RunBefore = []string{"echo profile name = %PROFILE_NAME%"}
+	} else {
+		profile.RunBefore = []string{"echo profile name = $PROFILE_NAME"}
+	}
+	wrapper := newResticWrapper("echo", false, false, profile, "test", nil, nil)
+	err := wrapper.runProfile()
+	assert.NoError(t, err)
+	assert.Equal(t, "profile name = TestEnvProfileName\ntest\n", buffer.String())
+}
+
+func TestEnvProfileCommand(t *testing.T) {
+	buffer := &bytes.Buffer{}
+	term.SetOutput(buffer)
+	profile := config.NewProfile(nil, "name")
+	if runtime.GOOS == "windows" {
+		profile.RunBefore = []string{"echo profile command = %PROFILE_COMMAND%"}
+	} else {
+		profile.RunBefore = []string{"echo profile command = $PROFILE_COMMAND"}
+	}
+	wrapper := newResticWrapper("echo", false, false, profile, "test-command", nil, nil)
+	err := wrapper.runProfile()
+	assert.NoError(t, err)
+	assert.Equal(t, "profile command = test-command\ntest-command\n", buffer.String())
+}
+
+func TestEnvError(t *testing.T) {
+	buffer := &bytes.Buffer{}
+	term.SetOutput(buffer)
+	profile := config.NewProfile(nil, "name")
+	if runtime.GOOS == "windows" {
+		profile.RunAfterFail = []string{"echo error: %ERROR%"}
+	} else {
+		profile.RunAfterFail = []string{"echo error: $ERROR"}
+	}
+	wrapper := newResticWrapper("exit", false, false, profile, "1", nil, nil)
+	err := wrapper.runProfile()
+	assert.Error(t, err)
+	assert.Equal(t, "error: 1 on profile 'name': exit status 1\n", buffer.String())
 }

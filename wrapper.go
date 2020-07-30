@@ -224,6 +224,9 @@ func (r *resticWrapper) runPreCommand(command string) error {
 	for i, preCommand := range r.profile.Backup.RunBefore {
 		clog.Debugf("starting pre-backup command %d/%d", i+1, len(r.profile.Backup.RunBefore))
 		rCommand := newShellCommand(preCommand, nil, env, r.dryRun, r.sigChan)
+		// stdout are stderr are coming from the default terminal (in case they're redirected)
+		rCommand.stdout = term.GetOutput()
+		rCommand.stderr = term.GetErrorOutput()
 		err := runShellCommand(rCommand)
 		if err != nil {
 			return fmt.Errorf("run-before backup on profile '%s': %w", r.profile.Name, err)
@@ -246,6 +249,9 @@ func (r *resticWrapper) runPostCommand(command string) error {
 	for i, postCommand := range r.profile.Backup.RunAfter {
 		clog.Debugf("starting post-backup command %d/%d", i+1, len(r.profile.Backup.RunAfter))
 		rCommand := newShellCommand(postCommand, nil, env, r.dryRun, r.sigChan)
+		// stdout are stderr are coming from the default terminal (in case they're redirected)
+		rCommand.stdout = term.GetOutput()
+		rCommand.stderr = term.GetErrorOutput()
 		err := runShellCommand(rCommand)
 		if err != nil {
 			return fmt.Errorf("run-after backup on profile '%s': %w", r.profile.Name, err)
@@ -264,6 +270,9 @@ func (r *resticWrapper) runProfilePreCommand() error {
 	for i, preCommand := range r.profile.RunBefore {
 		clog.Debugf("starting 'run-before' profile command %d/%d", i+1, len(r.profile.RunBefore))
 		rCommand := newShellCommand(preCommand, nil, env, r.dryRun, r.sigChan)
+		// stdout are stderr are coming from the default terminal (in case they're redirected)
+		rCommand.stdout = term.GetOutput()
+		rCommand.stderr = term.GetErrorOutput()
 		err := runShellCommand(rCommand)
 		if err != nil {
 			return fmt.Errorf("run-before on profile '%s': %w", r.profile.Name, err)
@@ -282,6 +291,9 @@ func (r *resticWrapper) runProfilePostCommand() error {
 	for i, postCommand := range r.profile.RunAfter {
 		clog.Debugf("starting 'run-after' profile command %d/%d", i+1, len(r.profile.RunAfter))
 		rCommand := newShellCommand(postCommand, nil, env, r.dryRun, r.sigChan)
+		// stdout are stderr are coming from the default terminal (in case they're redirected)
+		rCommand.stdout = term.GetOutput()
+		rCommand.stderr = term.GetErrorOutput()
 		err := runShellCommand(rCommand)
 		if err != nil {
 			return fmt.Errorf("run-after on profile '%s': %w", r.profile.Name, err)
@@ -301,6 +313,9 @@ func (r *resticWrapper) runProfilePostFailCommand(fail error) error {
 	for i, postCommand := range r.profile.RunAfterFail {
 		clog.Debugf("starting 'run-after-fail' profile command %d/%d", i+1, len(r.profile.RunAfterFail))
 		rCommand := newShellCommand(postCommand, nil, env, r.dryRun, r.sigChan)
+		// stdout are stderr are coming from the default terminal (in case they're redirected)
+		rCommand.stdout = term.GetOutput()
+		rCommand.stderr = term.GetErrorOutput()
 		err := runShellCommand(rCommand)
 		if err != nil {
 			return err
