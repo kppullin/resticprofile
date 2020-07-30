@@ -75,7 +75,7 @@ func TestPreProfileScriptFail(t *testing.T) {
 	profile.RunBefore = []string{"exit 1"} // this should both work on unix shell and windows batch
 	wrapper := newResticWrapper("echo", false, false, profile, "test", nil, nil)
 	err := wrapper.runProfile()
-	assert.EqualError(t, err, "exit status 1")
+	assert.EqualError(t, err, "run-before on profile 'name': exit status 1")
 }
 
 func TestPostProfileScriptFail(t *testing.T) {
@@ -83,7 +83,7 @@ func TestPostProfileScriptFail(t *testing.T) {
 	profile.RunAfter = []string{"exit 1"} // this should both work on unix shell and windows batch
 	wrapper := newResticWrapper("echo", false, false, profile, "test", nil, nil)
 	err := wrapper.runProfile()
-	assert.EqualError(t, err, "exit status 1")
+	assert.EqualError(t, err, "run-after on profile 'name': exit status 1")
 }
 
 func TestRunEchoProfile(t *testing.T) {
@@ -100,7 +100,7 @@ func TestPostProfileAfterFail(t *testing.T) {
 	profile.RunAfter = []string{"echo failed > " + testFile}
 	wrapper := newResticWrapper("exit", false, false, profile, "1", nil, nil)
 	err := wrapper.runProfile()
-	assert.EqualError(t, err, "exit status 1")
+	assert.EqualError(t, err, "1 on profile 'name': exit status 1")
 	assert.NoFileExistsf(t, testFile, "the run-after script should not have been running")
 	_ = os.Remove(testFile)
 }
@@ -112,7 +112,7 @@ func TestPostFailProfile(t *testing.T) {
 	profile.RunAfterFail = []string{"echo failed > " + testFile}
 	wrapper := newResticWrapper("exit", false, false, profile, "1", nil, nil)
 	err := wrapper.runProfile()
-	assert.EqualError(t, err, "exit status 1")
+	assert.EqualError(t, err, "1 on profile 'name': exit status 1")
 	assert.FileExistsf(t, testFile, "the run-after-fail script has not been running")
 	_ = os.Remove(testFile)
 }
