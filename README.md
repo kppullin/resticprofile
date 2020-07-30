@@ -49,6 +49,7 @@ For the rest of the documentation, I'll be mostly showing examples using the TOM
     * [Windows](#windows)
   * [Path resolution in configuration](#path-resolution-in-configuration)
   * [Run commands before, after success or after failure](#run-commands-before-after-success-or-after-failure)
+    * [run before and after order during a backup](#run-before-and-after-order-during-a-backup)
   * [Using resticprofile](#using-resticprofile)
   * [Command line reference](#command-line-reference)
   * [Minimum memory required](#minimum-memory-required)
@@ -72,7 +73,6 @@ For the rest of the documentation, I'll be mostly showing examples using the TOM
     * [User agent](#user-agent)
       * [Special case of schedule\-permission=user with sudo](#special-case-of-schedule-permissionuser-with-sudo)
     * [Daemon](#daemon)
-
 
 ## Requirements
 
@@ -460,12 +460,12 @@ All files path in the configuration are resolved from the configuration path. Th
 
 ## Run commands before, after success or after failure
 
-resticprofile has 2 places you can run commands around restic:
+resticprofile has 2 places where you can run commands around restic:
 
 - commands that will run before and after every restic command (snapshots, backup, check, forget, prune, mount, etc.). These are placed at the root of each profile.
 - commands that will only run before and after a backup: these are placed in the backup section of your profiles.
 
-Here's an example of all the commands that you can run in a profile:
+Here's an example of all the external commands that you can run during the execution of a profile:
 
 ```yaml
 documents:
@@ -486,6 +486,15 @@ A few environment variables will be set before running these commands:
 - `PROFILE_COMMAND`: backup, check, forget, etc.
 
 Additionally for the `run-after-fail` commands, the `ERROR` environment variable will be set to the latest error message.
+
+### run before and after order during a backup
+
+The commands will be running in this order **during a backup**:
+- `run-before` from the profile - if error, go to `run-after-fail`
+- `run-before` from the backup section - if error, go to `run-after-fail`
+- run the restic backup (with check and retention if configured) - if error, go to `run-after-fail`
+- `run-after` from the backup section - if error, go to `run-after-fail`
+- `run-after` from the profile - if error, go to `run-after-fail`
 
 ## Using resticprofile
 
