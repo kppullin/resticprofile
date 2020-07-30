@@ -158,7 +158,7 @@ func TestEnvProfileName(t *testing.T) {
 	wrapper := newResticWrapper("echo", false, false, profile, "test", nil, nil)
 	err := wrapper.runProfile()
 	assert.NoError(t, err)
-	assert.Equal(t, "profile name = TestEnvProfileName\ntest\n", buffer.String())
+	assert.Equal(t, "profile name = TestEnvProfileName\ntest\n", strings.ReplaceAll(buffer.String(), "\r\n", "\n"))
 }
 
 func TestEnvProfileCommand(t *testing.T) {
@@ -173,7 +173,7 @@ func TestEnvProfileCommand(t *testing.T) {
 	wrapper := newResticWrapper("echo", false, false, profile, "test-command", nil, nil)
 	err := wrapper.runProfile()
 	assert.NoError(t, err)
-	assert.Equal(t, "profile command = test-command\ntest-command\n", buffer.String())
+	assert.Equal(t, "profile command = test-command\ntest-command\n", strings.ReplaceAll(buffer.String(), "\r\n", "\n"))
 }
 
 func TestEnvError(t *testing.T) {
@@ -188,5 +188,5 @@ func TestEnvError(t *testing.T) {
 	wrapper := newResticWrapper("exit", false, false, profile, "1", nil, nil)
 	err := wrapper.runProfile()
 	assert.Error(t, err)
-	assert.Equal(t, "error: 1 on profile 'name': exit status 1\n", buffer.String())
+	assert.Equal(t, "error: 1 on profile 'name': exit status 1\n", strings.ReplaceAll(buffer.String(), "\r\n", "\n"))
 }
