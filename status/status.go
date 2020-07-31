@@ -3,26 +3,15 @@ package status
 import (
 	"encoding/json"
 	"os"
-	"time"
 
 	"github.com/spf13/afero"
 )
 
 // Status of last schedule profile
 type Status struct {
-	fs        afero.Fs
-	filename  string
-	Profile   string         `json:"profile"`
-	Backup    *CommandStatus `json:"backup,omitempty"`
-	Retention *CommandStatus `json:"retention,omitempty"`
-	Check     *CommandStatus `json:"check,omitempty"`
-}
-
-// CommandStatus is the last command status
-type CommandStatus struct {
-	Success bool      `json:"success"`
-	Time    time.Time `json:"time"`
-	Error   string    `json:"error"`
+	fs       afero.Fs
+	filename string
+	Profiles map[string]*Profile `json:"profiles"`
 }
 
 // NewStatus returns a new blank status
@@ -30,6 +19,7 @@ func NewStatus(fileName string) *Status {
 	return &Status{
 		fs:       afero.NewOsFs(),
 		filename: fileName,
+		Profiles: make(map[string]*Profile),
 	}
 }
 
@@ -38,6 +28,7 @@ func newAferoStatus(fs afero.Fs, fileName string) *Status {
 	return &Status{
 		fs:       fs,
 		filename: fileName,
+		Profiles: make(map[string]*Profile),
 	}
 }
 
@@ -54,46 +45,14 @@ func (s *Status) Load() *Status {
 	return s
 }
 
-// Name sets the profile name
-func (s *Status) Name(name string) *Status {
-	s.Profile = name
-	return s
-}
-
-// BackupSuccess indicates the last backup was successful
-func (s *Status) BackupSuccess() *Status {
-	s.Backup = newSuccess()
-	return s
-}
-
-// BackupError sets the error of the last backup
-func (s *Status) BackupError(err error) *Status {
-	s.Backup = newError(err)
-	return s
-}
-
-// RetentionSuccess indicates the last retention was successful
-func (s *Status) RetentionSuccess() *Status {
-	s.Retention = newSuccess()
-	return s
-}
-
-// RetentionError sets the error of the last retention
-func (s *Status) RetentionError(err error) *Status {
-	s.Retention = newError(err)
-	return s
-}
-
-// CheckSuccess indicates the last check was successful
-func (s *Status) CheckSuccess() *Status {
-	s.Check = newSuccess()
-	return s
-}
-
-// CheckError sets the error of the last check
-func (s *Status) CheckError(err error) *Status {
-	s.Check = newError(err)
-	return s
+// Profile gets the profile from its name (it creates a blank new one if not exists)
+func (s *Status) Profile(name string) *Profile {
+	if profile, ok := s.Profiles[name]; ok {
+		return profile
+	}
+	profile := newProfile()
+	s.Profiles[name] = profile
+	return profile
 }
 
 // Save current status to the file
@@ -109,18 +68,4 @@ func (s *Status) Save() error {
 		return err
 	}
 	return nil
-}
-func newSuccess() *CommandStatus {
-	return &CommandStatus{
-		Success: true,
-		Time:    time.Now(),
-	}
-}
-
-func newError(err error) *CommandStatus {
-	return &CommandStatus{
-		Success: false,
-		Time:    time.Now(),
-		Error:   err.Error(),
-	}
 }
