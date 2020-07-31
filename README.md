@@ -1069,6 +1069,7 @@ Flags used by resticprofile only
 * **run-before**: string OR list of strings
 * **run-after**: string OR list of strings
 * **run-after-fail**: string OR list of strings
+* **status-file**: string
 
 Flags passed to the restic command line
 
